@@ -3,7 +3,8 @@ name: Deploy Service to Environments
 on:
   push:
     branches:
-      - main # Triggers on merge/push to the main branch
+      - main 
+      - feat/cicd_pipeline # Triggers on merge/push to the main branch
   workflow_dispatch: # Allows manual triggering
 
 jobs:
