@@ -5,7 +5,7 @@ CREATE OR REPLACE AGENT identifier($name)
 WITH PROFILE='{ "display_name": "Snowflake Housekeeping Agent" }'
     COMMENT=$$ This is an agent that can answer questions about Snowflake platform monitoring, cost optimization, and governance questions. $$
 FROM SPECIFICATION $$
-{
+{ 
   "models": {
     "orchestration": ""
   },

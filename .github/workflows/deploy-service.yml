@@ -136,7 +136,7 @@ jobs:
 
   # Job 3: Deploy all changed components to the Staging environment
   deploy-test:
-    needs: deploy-dev # This job runs only after 'deploy-dev' succeeds
+    needs: [detect-changes, deploy-dev] # This job runs only after 'deploy-dev' succeeds
     if: needs.detect-changes.outputs.components != '[]'
     runs-on: ubuntu-latest
     environment: test
@@ -194,7 +194,7 @@ jobs:
 
   # Job 4: Deploy all changed components to Production with a manual approval gate
   deploy-prod:
-    needs: deploy-test # This job runs only after 'deploy-test' succeeds
+    needs: [detect-changes, deploy-test] # This job runs only after 'deploy-test' succeeds
     if: needs.detect-changes.outputs.components != '[]'
     runs-on: ubuntu-latest
     environment: production # This environment will have a protection rule
