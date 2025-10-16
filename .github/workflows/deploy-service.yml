@@ -68,6 +68,7 @@ jobs:
           else
             printf '%s\n' "${files[@]}" | jq -R . | jq -s -c . > /tmp/files.json
             files_json=$(cat /tmp/files.json)
+            echo "Debug: Generated files_json = $files_json"
           fi
           
           echo "Components to deploy: $json_array"
@@ -92,8 +93,7 @@ jobs:
       - name: Setup
         run: |
           pip install snowflake-cli-labs
-          sudo apt-get update && sudo apt-get install -y bc
-          pip install jq
+          sudo apt-get update && sudo apt-get install -y bc jq
 
       - name: Deploy ${{ matrix.component }} to Development
         shell: bash
@@ -101,21 +101,29 @@ jobs:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_WAREHOUSE: ${{ vars.WAREHOUSE_DEV }}
-          SNOWFLAKE_DATABASE: ${{ vars.DATABASE_DEV }}
-          SNOWFLAKE_SCHEMA: ${{ vars.SCHEMA_DEV }}
-          SNOWFLAKE_ROLE: ${{ vars.ROLE }}
+          SNOWFLAKE_WAREHOUSE: TECHUP25_WH
+          SNOWFLAKE_DATABASE: TECHUP25
+          SNOWFLAKE_SCHEMA: AGENTIC_AI
+          SNOWFLAKE_ROLE: TECHUP25_RL
         run: |
           echo "Deploying ${{ matrix.component }} to Development..."
           snow connection test --temporary-connection
           # Get files for this specific component
           files_json='${{ fromJson(needs.detect-changes.outputs.files) }}'
+          echo "Debug: files_json = $files_json"
+          
           if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
             component_files=""
           else
-            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
-              map(select(. | contains("components/" + $component + "/"))) | .[]
-            ')
+            # Validate JSON before processing
+            if echo "$files_json" | jq empty 2>/dev/null; then
+              component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+                map(select(. | contains("components/" + $component + "/"))) | .[]
+              ')
+            else
+              echo "Warning: Invalid JSON in files_json, skipping jq processing"
+              component_files=""
+            fi
           fi
           
           echo "Files for ${{ matrix.component }}:"
@@ -149,8 +157,7 @@ jobs:
       - name: Setup
         run: |
           pip install snowflake-cli-labs
-          sudo apt-get update && sudo apt-get install -y bc
-          pip install jq
+          sudo apt-get update && sudo apt-get install -y bc jq
 
       - name: Deploy ${{ matrix.component }} to Staging
         shell: bash
@@ -159,12 +166,20 @@ jobs:
           
           # Get files for this specific component
           files_json='${{ fromJson(needs.detect-changes.outputs.files) }}'
+          echo "Debug: files_json = $files_json"
+          
           if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
             component_files=""
           else
-            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
-              map(select(. | contains("components/" + $component + "/"))) | .[]
-            ')
+            # Validate JSON before processing
+            if echo "$files_json" | jq empty 2>/dev/null; then
+              component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+                map(select(. | contains("components/" + $component + "/"))) | .[]
+              ')
+            else
+              echo "Warning: Invalid JSON in files_json, skipping jq processing"
+              component_files=""
+            fi
           fi
           
           echo "Files for ${{ matrix.component }}:"
@@ -197,8 +212,7 @@ jobs:
       - name: Setup
         run: |
           pip install snowflake-cli-labs
-          sudo apt-get update && sudo apt-get install -y bc
-          pip install jq
+          sudo apt-get update && sudo apt-get install -y bc jq
 
       - name: Deploy ${{ matrix.component }} to Production
         shell: bash
@@ -207,12 +221,20 @@ jobs:
           
           # Get files for this specific component
           files_json='${{ fromJson(needs.detect-changes.outputs.files) }}'
+          echo "Debug: files_json = $files_json"
+          
           if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
             component_files=""
           else
-            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
-              map(select(. | contains("components/" + $component + "/"))) | .[]
-            ')
+            # Validate JSON before processing
+            if echo "$files_json" | jq empty 2>/dev/null; then
+              component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+                map(select(. | contains("components/" + $component + "/"))) | .[]
+              ')
+            else
+              echo "Warning: Invalid JSON in files_json, skipping jq processing"
+              component_files=""
+            fi
           fi
           
           echo "Files for ${{ matrix.component }}:"
