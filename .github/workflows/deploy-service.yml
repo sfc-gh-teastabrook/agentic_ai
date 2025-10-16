@@ -97,13 +97,26 @@ jobs:
 
       - name: Deploy ${{ matrix.component }} to Development
         shell: bash
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.WAREHOUSE_DEV }}
+          SNOWFLAKE_DATABASE: ${{ vars.DATABASE_DEV }}
+          SNOWFLAKE_SCHEMA: ${{ vars.SCHEMA_DEV }}
+          SNOWFLAKE_ROLE: ${{ vars.ROLE }}
         run: |
           echo "Deploying ${{ matrix.component }} to Development..."
-          
+          snow connection test --temporary-connection
           # Get files for this specific component
-          component_files=$(echo '${{ fromJson(needs.detect-changes.outputs.files) }}' | jq -r --arg component "${{ matrix.component }}" '
-            map(select(. | contains("components/" + $component + "/"))) | .[]
-          ')
+          files_json='${{ fromJson(needs.detect-changes.outputs.files) }}'
+          if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
+            component_files=""
+          else
+            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+              map(select(. | contains("components/" + $component + "/"))) | .[]
+            ')
+          fi
           
           echo "Files for ${{ matrix.component }}:"
           echo "$component_files"
@@ -111,9 +124,12 @@ jobs:
           # Iterate over files for this component
           echo "$component_files" | while read -r file; do
             if [ -n "$file" ]; then
-              echo "Processing file: $file"
-              # Add your component-specific deployment logic here
-              # For example: your-cli deploy --component ${{ matrix.component }} --file "$file" --env development --token ${{ secrets.YOUR_SERVICE_TOKEN }}
+              echo "Running file: $file"
+              snow sql --temporary-connection -f "$file" \
+                --variable env="DEV" >> results.txt
+              if grep -q "Error" results.txt; then
+                echo "❌ Deployment failed"; cat results.txt; exit 1
+              fi
             fi
           done
 
@@ -142,9 +158,14 @@ jobs:
           echo "Deploying ${{ matrix.component }} to Staging..."
           
           # Get files for this specific component
-          component_files=$(echo '${{ fromJson(needs.detect-changes.outputs.files) }}' | jq -r --arg component "${{ matrix.component }}" '
-            map(select(. | contains("components/" + $component + "/"))) | .[]
-          ')
+          files_json='${{ fromJson(needs.detect-changes.outputs.files) }}'
+          if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
+            component_files=""
+          else
+            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+              map(select(. | contains("components/" + $component + "/"))) | .[]
+            ')
+          fi
           
           echo "Files for ${{ matrix.component }}:"
           echo "$component_files"
@@ -185,9 +206,14 @@ jobs:
           echo "Deploying ${{ matrix.component }} to Production..."
           
           # Get files for this specific component
-          component_files=$(echo '${{ fromJson(needs.detect-changes.outputs.files) }}' | jq -r --arg component "${{ matrix.component }}" '
-            map(select(. | contains("components/" + $component + "/"))) | .[]
-          ')
+          files_json='${{ fromJson(needs.detect-changes.outputs.files) }}'
+          if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
+            component_files=""
+          else
+            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+              map(select(. | contains("components/" + $component + "/"))) | .[]
+            ')
+          fi
           
           echo "Files for ${{ matrix.component }}:"
           echo "$component_files"
