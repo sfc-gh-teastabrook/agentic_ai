@@ -73,6 +73,13 @@ Add the following entry to your local `.cursor/mcp.json` so Cursor can call Snow
 
 Replace `<org>.<account>` and `<YOUR_PAT_TOKEN>` accordingly.
 
+### 3) Create a Programmatic Access Token (PAT)
+
+In Snowsight: Profile (bottom-left) » Settings » Authentication » Programmatic access tokens » Generate new token.
+
+- Select Single Role and choose `TECHUP25_RL`
+- Copy and securely store the token (you cannot view it again)
+
 ## Verify your setup
 
 Run these checks after executing `setup.sql`.
