@@ -39,7 +39,7 @@ jobs:
             if [[ "$file" == components/cortex_search/** ]]; then
               components+=("cortex_search")
               files+=("$file")
-            elif [[ "$file" == components/semantic_view/** ]]; then
+            elif [[ "$file" == components/semantic_views/** ]]; then
               components+=("semantic_views")
               files+=("$file")
             elif [[ "$file" == components/cortex_agent/** ]]; then
