@@ -1,0 +1,75 @@
+--!jinja
+USE ROLE TECHUP25_RL;
+CREATE OR REPLACE CORTEX SEARCH SERVICE identifier('TECHUP25.{{ENV}}AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE')
+ON QUERY_TEXT  -- Primary searchable column (SQL text content)
+ATTRIBUTES (
+    -- Core identifiers for filtering and context
+    QUERY_ID,
+    QUERY_TYPE,
+    
+    -- User and security context
+    USER_NAME,
+    ROLE_NAME,
+    USER_TYPE,
+    
+    -- Infrastructure context
+    DATABASE_NAME,
+    SCHEMA_NAME,
+    WAREHOUSE_NAME,
+    WAREHOUSE_SIZE,
+    
+    -- Execution context
+    START_TIME,
+    END_TIME,
+    EXECUTION_STATUS,
+    ERROR_CODE,
+    ERROR_MESSAGE,
+    
+    -- Performance metrics
+    TOTAL_ELAPSED_TIME,
+    BYTES_SCANNED,
+    PERCENTAGE_SCANNED_FROM_CACHE,
+    
+    -- Cost information
+    CREDITS_USED_CLOUD_SERVICES,
+    
+    -- Search-optimized fields
+    SEARCH_METADATA,
+    QUERY_SUMMARY,
+    PERFORMANCE_CATEGORY,
+    COST_CATEGORY,
+    
+    -- Spill indicators (for performance analysis)
+    BYTES_SPILLED_TO_LOCAL_STORAGE,
+    BYTES_SPILLED_TO_REMOTE_STORAGE
+)
+WAREHOUSE = TECHUP25_WH  -- Change this to your preferred warehouse
+TARGET_LAG = '1 HOUR'   -- How often to refresh the search index
+AS
+SELECT 
+    QUERY_TEXT,
+    QUERY_ID,
+    QUERY_TYPE,
+    USER_NAME,
+    ROLE_NAME,
+    USER_TYPE,
+    DATABASE_NAME,
+    SCHEMA_NAME,
+    WAREHOUSE_NAME,
+    WAREHOUSE_SIZE,
+    START_TIME,
+    END_TIME,
+    EXECUTION_STATUS,
+    ERROR_CODE,
+    ERROR_MESSAGE,
+    TOTAL_ELAPSED_TIME,
+    BYTES_SCANNED,
+    PERCENTAGE_SCANNED_FROM_CACHE,
+    CREDITS_USED_CLOUD_SERVICES,
+    SEARCH_METADATA,
+    QUERY_SUMMARY,
+    PERFORMANCE_CATEGORY,
+    COST_CATEGORY,
+    BYTES_SPILLED_TO_LOCAL_STORAGE,
+    BYTES_SPILLED_TO_REMOTE_STORAGE
+FROM TECHUP25.AGENTIC_AI.QUERY_HISTORY_MATERIALIZED;

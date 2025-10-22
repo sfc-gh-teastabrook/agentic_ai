@@ -1,0 +1,249 @@
+name: Deploy Service to Environments
+
+on:
+  push:
+    branches:
+      - main 
+      - feat/cicd_pipeline # Triggers on merge/push to the main branch
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  # Job 1: Detect which components have changed based on file paths
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # This output will be a JSON array string like '["component-a", "component-b"]'
+      components: ${{ steps.set-matrix.outputs.components }}
+      # This output will be a JSON array string of changed files
+      files: ${{ steps.set-matrix.outputs.files }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch depth 0 to get all history for accurate change detection
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Determine which components to deploy
+        id: set-matrix
+        shell: bash
+        run: |
+          components=()
+          files=()
+          
+          # Note: Order of components is important for deployment.
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ "$file" == components/cortex_search/** ]]; then
+              components+=("cortex_search")
+              files+=("$file")
+            elif [[ "$file" == components/semantic_views/** ]]; then
+              components+=("semantic_views")
+              files+=("$file")
+            elif [[ "$file" == components/cortex_agent/** ]]; then
+              components+=("cortex_agent")
+              files+=("$file")
+            elif [[ "$file" == components/mcp_server/** ]]; then
+              components+=("mcp_server")
+              files+=("$file")
+            fi
+          done
+          
+          # Get unique components, convert to a JSON array, and set as output
+          if [ ${#components[@]} -eq 0 ]; then
+            json_array="[]"
+          else
+            printf '%s\n' "${components[@]}" | sort -u | jq -R . | jq -s -c . > /tmp/components.json
+            json_array=$(cat /tmp/components.json)
+          fi
+          
+          # Convert files array to JSON
+          if [ ${#files[@]} -eq 0 ]; then
+            files_json="[]"
+          else
+            printf '%s\n' "${files[@]}" | jq -R . | jq -s -c . > /tmp/files.json
+            files_json=$(cat /tmp/files.json)
+          fi
+          
+          echo "Components to deploy: $json_array"
+          echo "Files changed: $files_json"
+          echo "components=$json_array" >> $GITHUB_OUTPUT
+          echo "files=$files_json" >> $GITHUB_OUTPUT
+
+  # Job 2: Deploy all changed components to the Development environment
+  deploy-dev:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.components != '[]' # Only run if there are changes
+    runs-on: ubuntu-latest
+    environment: development # Associate this job with the 'development' environment
+    strategy:
+      matrix:
+        # Create a parallel job for each component identified in the 'detect-changes' job
+        component: ${{ fromJson(needs.detect-changes.outputs.components) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup
+        run: |
+          pip install snowflake-cli-labs
+          sudo apt-get update && sudo apt-get install -y bc jq
+
+      - name: Deploy ${{ matrix.component }} to Development
+        shell: bash
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_WAREHOUSE: TECHUP25_WH
+          SNOWFLAKE_DATABASE: TECHUP25
+          SNOWFLAKE_SCHEMA: AGENTIC_AI
+          SNOWFLAKE_ROLE: TECHUP25_RL
+        run: |
+          echo "Deploying ${{ matrix.component }} to Development..."
+          snow connection test --temporary-connection
+          # Get files for this specific component
+          files_json='${{ needs.detect-changes.outputs.files }}'
+
+          echo "Files for ${{ matrix.component }}: $files_json"
+          if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
+            component_files=""
+          else
+            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+              map(select(. | contains("components/" + $component + "/"))) | .[]
+            ')
+          fi
+          
+          echo "Files for ${{ matrix.component }}:"
+          echo "$component_files"
+          
+          # Iterate over files for this component
+          echo "$component_files" | while read -r file; do
+            if [ -n "$file" ]; then
+              echo "Running file: $file"
+              snow sql --temporary-connection -f "$file" \
+                --variable ENV="DEV_" --enable-templating JINJA
+            fi
+          done
+      - name: Evaluate Component ${{ matrix.component }}
+        run: |
+          echo "Placeholder for evaluating ${{ matrix.component }}..."
+
+
+  # Job 3: Deploy all changed components to the Staging environment
+  deploy-test:
+    needs: [detect-changes, deploy-dev] # This job runs only after 'deploy-dev' succeeds
+    if: needs.detect-changes.outputs.components != '[]'
+    runs-on: ubuntu-latest
+    environment: test
+    strategy:
+      matrix:
+        component: ${{ fromJson(needs.detect-changes.outputs.components) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup
+        run: |
+          pip install snowflake-cli-labs
+          sudo apt-get update && sudo apt-get install -y bc jq
+
+      - name: Deploy ${{ matrix.component }} to Development
+        shell: bash
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_WAREHOUSE: TECHUP25_WH
+          SNOWFLAKE_DATABASE: TECHUP25
+          SNOWFLAKE_SCHEMA: AGENTIC_AI
+          SNOWFLAKE_ROLE: TECHUP25_RL
+        run: |
+          echo "Deploying ${{ matrix.component }} to Development..."
+          snow connection test --temporary-connection
+          # Get files for this specific component
+          files_json='${{ needs.detect-changes.outputs.files }}'
+
+          echo "Files for ${{ matrix.component }}: $files_json"
+          if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
+            component_files=""
+          else
+            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+              map(select(. | contains("components/" + $component + "/"))) | .[]
+            ')
+          fi
+          
+          echo "Files for ${{ matrix.component }}:"
+          echo "$component_files"
+          
+          # Iterate over files for this component
+          echo "$component_files" | while read -r file; do
+            if [ -n "$file" ]; then
+              echo "Running file: $file"
+              snow sql --temporary-connection -f "$file" \
+                --variable ENV="TEST_" --enable-templating JINJA
+            fi
+          done
+      - name: Evaluate Component ${{ matrix.component }}
+        run: |
+          echo "Placeholder for evaluating ${{ matrix.component }}..."
+
+  # Job 4: Deploy all changed components to Production with a manual approval gate
+  deploy-prod:
+    needs: [detect-changes, deploy-test] # This job runs only after 'deploy-test' succeeds
+    if: needs.detect-changes.outputs.components != '[]'
+    runs-on: ubuntu-latest
+    environment: production # This environment will have a protection rule
+    strategy:
+      matrix:
+        component: ${{ fromJson(needs.detect-changes.outputs.components) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup
+        run: |
+          pip install snowflake-cli-labs
+          sudo apt-get update && sudo apt-get install -y bc jq
+
+      - name: Deploy ${{ matrix.component }} to Development
+        shell: bash
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_WAREHOUSE: TECHUP25_WH
+          SNOWFLAKE_DATABASE: TECHUP25
+          SNOWFLAKE_SCHEMA: AGENTIC_AI
+          SNOWFLAKE_ROLE: TECHUP25_RL
+        run: |
+          echo "Deploying ${{ matrix.component }} to Development..."
+          snow connection test --temporary-connection
+          # Get files for this specific component
+          files_json='${{ needs.detect-changes.outputs.files }}'
+
+          echo "Files for ${{ matrix.component }}: $files_json"
+          if [ "$files_json" = "null" ] || [ -z "$files_json" ] || [ "$files_json" = "[]" ]; then
+            component_files=""
+          else
+            component_files=$(echo "$files_json" | jq -r --arg component "${{ matrix.component }}" '
+              map(select(. | contains("components/" + $component + "/"))) | .[]
+            ')
+          fi
+          
+          echo "Files for ${{ matrix.component }}:"
+          echo "$component_files"
+          
+          # Iterate over files for this component
+          echo "$component_files" | while read -r file; do
+            if [ -n "$file" ]; then
+              echo "Running file: $file"
+              snow sql --temporary-connection -f "$file" \
+                --variable ENV="" --enable-templating JINJA
+            fi
+          done
+      - name: Evaluate Component ${{ matrix.component }}
+        run: |
+          echo "Placeholder for evaluating ${{ matrix.component }}..."
