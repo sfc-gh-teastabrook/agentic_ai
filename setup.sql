@@ -4,6 +4,8 @@ USE ROLE ACCOUNTADMIN;
 ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'AWS_US';
 -- Create consumer role
 CREATE ROLE IF NOT EXISTS TECHUP25_RL;
+GRANT ROLE TECHUP25_RL TO ROLE ACCOUNTADMIN;
+
 GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE TO ROLE techup25_rl;
 GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE TECHUP25_RL;
 SET my_user = CURRENT_USER();
@@ -14,13 +16,18 @@ GRANT ROLE TECHUP25_RL TO USER GH_ACTION_USER;
 -- 2. Create database, schema, and warehouse
 CREATE DATABASE IF NOT EXISTS TECHUP25;
 CREATE SCHEMA IF NOT EXISTS TECHUP25.AGENTIC_AI;
-grant all on schema techup25.agentic_ai to role techup25_rl;
+USE SCHEMA TECHUP25.AGENTIC_AI;
+GRANT ALL ON SCHEMA techup25.agentic_ai TO ROLE TECHUP25_RL;
 
+-- A User for Github
 CREATE AUTHENTICATION POLICY IF NOT EXISTS PAT_ALLOW
   PAT_POLICY=(
     NETWORK_POLICY_EVALUATION = NOT_ENFORCED
   );
 ALTER USER GH_ACTION_USER SET AUTHENTICATION POLICY PAT_ALLOW;
+ALTER USER GH_ACTION_USER ADD PROGRAMMATIC ACCESS TOKEN GH_ACTION_PAT
+ROLE_RESTRICTION = 'TECHUP25_RL';
+
 
 -- TECHUP25 Database
 GRANT ALL ON DATABASE TECHUP25 TO ROLE TECHUP25_RL;
@@ -312,6 +319,7 @@ LIMIT 1000
 
 
 -- [Optional] Verify the materialization
+/*
 SELECT 
     COUNT(*) AS total_queries,
     MIN(START_TIME) AS earliest_query,
@@ -321,8 +329,10 @@ SELECT
     COUNT(DISTINCT WAREHOUSE_NAME) AS unique_warehouses,
     ROUND(SUM(CREDITS_USED_CLOUD_SERVICES), 2) AS total_cloud_service_credits,
 FROM QUERY_HISTORY_MATERIALIZED;
+ */
 
 -- [Optional] Sample the search fields
+/*
 SELECT 
     QUERY_ID,
     QUERY_TYPE,
@@ -336,7 +346,7 @@ SELECT
 FROM QUERY_HISTORY_MATERIALIZED 
 ORDER BY START_TIME DESC
 LIMIT 5;
-
+ */
 
 -- 4. Create the search service
 USE ROLE TECHUP25_RL;
@@ -417,10 +427,11 @@ SELECT
     BYTES_SPILLED_TO_REMOTE_STORAGE
 FROM QUERY_HISTORY_MATERIALIZED;
 
--- /** [Optional] Start of test. 
+-- /**[Optional] Start of test. 
 -- Note: Wait a few minutes after creation for indexing to complete
 -- Test the search service with sample queries
 -- Test 1: Find queries by SQL pattern
+/* 
 SELECT 'TEST 1: Find SELECT queries on SALES database' AS test_description;
 SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
     'TECHUP25.AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE',
@@ -430,8 +441,9 @@ SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
         "limit": 3
     }'
 );
-
+*/
 -- Test 2: Find expensive queries
+/*
 SELECT 'TEST 2: Find expensive or long-running queries' AS test_description;
 SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
     'TECHUP25.AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE',
@@ -441,8 +453,9 @@ SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
         "limit": 3
     }'
 );
-
+*/
 -- Test 3: Find queries with errors
+/* 
 SELECT 'TEST 3: Find failed queries with error messages' AS test_description;
 SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
     'TECHUP25.AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE',
@@ -452,8 +465,9 @@ SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
         "limit": 3
     }'
 );
-
+*/
 -- Test 4: Find queries by specific user or role patterns
+/*
 SELECT 'TEST 4: Find queries by data engineering roles' AS test_description;
 SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
     'TECHUP25.AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE',
@@ -463,8 +477,9 @@ SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
         "limit": 3
     }'
 );
-
+*/
 -- Test 5: Find queries with performance issues
+/*
 SELECT 'TEST 5: Find queries that spilled to disk' AS test_description;
 SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
     'TECHUP25.AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE',
@@ -474,8 +489,9 @@ SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
         "limit": 3
     }'
 );
-
+*/
 -- Advanced search examples with filters
+/*
 SELECT 'ADVANCED: Find recent expensive queries by specific users' AS test_description;
 SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
     'TECHUP25.AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE',
@@ -485,17 +501,21 @@ SELECT SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
         "limit": 5
     }'
 );
-
+*/
 -- Utility: Check search service status and statistics
+/* 
 SELECT 'SEARCH SERVICE STATUS' AS info;
 SHOW CORTEX SEARCH SERVICES LIKE 'TECHUP25.AGENTIC_AI.QUERY_HISTORY_SEARCH_SERVICE';
+*/
 
 -- Utility: Get search service information
+/*
 SELECT 
     'SEARCH SERVICE INFO' AS category,
     COUNT(*) AS indexed_records
 FROM QUERY_HISTORY_MATERIALIZED;
-
+*/
+/* 
 SELECT 
     'RECENT DATA AVAILABILITY' AS category,
     MIN(START_TIME) AS earliest_query,
@@ -504,6 +524,7 @@ SELECT
     COUNT(DISTINCT DATABASE_NAME) AS unique_databases,
     COUNT(DISTINCT QUERY_TYPE) AS unique_query_types
 FROM QUERY_HISTORY_MATERIALIZED;
+*/
 -- [Optional] End of test. **/
 
 -- 4-2. Get Cortex Knowledge Base.
@@ -6897,12 +6918,6 @@ $$;
 --            }
 --      }
 --}
-
-grant role techup25_rl to role accountadmin;
-
-ALTER USER GH_ACTION_USER ADD PROGRAMMATIC ACCESS TOKEN GH_ACTION_PAT
-ROLE_RESTRICTION = 'TECHUP25_RL';
-
 
 -- 9. Cleanup Script
 -- Run this section to remove all resources created above

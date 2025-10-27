@@ -170,6 +170,3 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-# Others 
-snowflake_agent_best_practices.md
