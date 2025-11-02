@@ -1,6 +1,6 @@
 # TechUp25 Agentic AI and Production Deployment Patterns 🤖
 
-[![Deploy Service to Environments](https://github.com/sfc-gh-ncostar/agentic_ai/actions/workflows/deploy-service.yml/badge.svg)](https://github.com/sfc-gh-ncostar/agentic_ai/actions/workflows/deploy-service.yml)
+[![Deploy Service to Environments](https://github.com/sfc-gh-mtakada/agentic_ai/actions/workflows/deploy-service.yml/badge.svg)](https://github.com/sfc-gh-mtakada/agentic_ai/actions/workflows/deploy-service.yml)
 
 ## Overview
 
