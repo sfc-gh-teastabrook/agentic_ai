@@ -56,7 +56,7 @@ Run `setup.sql` in a Snowflake worksheet or via `snowsql`.
 
 Tip: If you want to use existing database/schema/warehouse names, adjust them in `setup.sql` before running (not recommended).
 
-### 2) [Optiobnal] Configure Cursor MCP client
+### 2) [Optional] Configure Cursor MCP client
 
 If you wish to configure your MCP Client in Cursor, use the below:
 
