@@ -9,7 +9,7 @@ This project provisions a Snowflake environment named `TECHUP25` and sets up a "
 - Creates and grants a consumer role `TECHUP25_RL`
 - Creates database/schema and a warehouse `TECHUP25_wh`
 - Materializes recent `ACCOUNT_USAGE.QUERY_HISTORY` into `TECHUP25.AGENTIC_AI.QUERY_HISTORY_MATERIALIZED`
-- For each environment (DEV, TEST, PROD), it:
+- If you elect to do the optional pipeline configuration, for each environment (DEV, TEST, PROD), it:
   - Builds a Cortex Search Service `TECHUP25.AGENTIC_AI.{{ENV}}QUERY_HISTORY_SEARCH_SERVICE` over the materialized history
   - Creates a Cortex Semantic Model `TECHUP25.AGENTIC_AI.{{ENV}}SNOWFLAKE_HOUSEKEEPING_AGENT`
   - Creates a Cortex Agent `TECHUP25.AGENTIC_AI.SNOWFLAKE_HOUSEKEEPING_AGENT`
