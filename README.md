@@ -56,7 +56,9 @@ Run `setup.sql` in a Snowflake worksheet or via `snowsql`.
 
 Tip: If you want to use existing database/schema/warehouse names, adjust them in `setup.sql` before running (not recommended).
 
-### 2) Configure Cursor MCP client
+### 2) [Optiobnal] Configure Cursor MCP client
+
+If you wish to configure your MCP Client in Cursor, use the below:
 
 Add the following entry to your local `.cursor/mcp.json` so Cursor can call Snowflake MCP endpoints with your PAT. This is the PAT token created in the setup script.
 
