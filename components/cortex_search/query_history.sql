@@ -44,7 +44,7 @@ ATTRIBUTES (
     BYTES_SPILLED_TO_REMOTE_STORAGE
 )
 WAREHOUSE = TECHUP25_WH  -- Change this to your preferred warehouse
-TARGET_LAG = '1 HOUR'   -- How often to refresh the search index
+TARGET_LAG = '2 HOURS'   -- How often to refresh the search index
 AS
 SELECT 
     QUERY_TEXT,
